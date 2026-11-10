@@ -1,0 +1,17 @@
+# secrets
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# scratch and dependencies
+tmp/
+node_modules/
+__pycache__/
+
+# generated from the source repository by scripts/build_data.py
+site/data/
+site/media/
+
+# worlds generated on demand by the server (large splat files)
+worlds/

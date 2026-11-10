@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Living Library · Story Animation Machine</title>
+<meta name="description" content="A library in motion. Choose a book, open it, and step into the world of its story.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<script>
+(() => {
+  let theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  try {
+    const saved = localStorage.getItem('living-library-theme');
+    if (saved === 'light' || saved === 'dark') theme = saved;
+  } catch { /* Use the device setting when storage is unavailable. */ }
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,500;0,600;1,400;1,500;1,600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap">
+<link rel="stylesheet" href="css/room.css">
+<link rel="stylesheet" href="css/world.css">
+<script type="importmap">
+{ "imports": {
+  "three": "./vendor/three/three.module.min.js",
+  "three/addons/": "./vendor/three/addons/",
+  "@sparkjsdev/spark": "./vendor/spark.module.min.js"
+} }
+</script>
+<link rel="modulepreload" href="vendor/three/three.module.min.js">
+</head>
+<body class="living-library-body is-library-loading" data-mode="library">
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header immersive-header">
+  <div class="site-brand">
+    <a class="site-mark" href="./" aria-label="Story Animation Machine home"><img class="brand-icon" src="favicon.svg" alt=""><span class="site-mark-long">Story Animation Machine</span><span class="site-mark-short">Story Machine</span></a>
+    <p class="site-counts" id="site-counts"></p>
+  </div>
+  <div class="site-header-actions">
+    <div class="site-search" id="search">
+      <label class="ll-announcement" for="search-input">Find a story</label>
+      <input id="search-input" type="search" placeholder="Find a story" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="search-results">
+      <ul id="search-results" role="listbox" hidden></ul>
+    </div>
+    <button class="theme-toggle" id="site-theme" data-theme-toggle type="button" aria-label="Switch to dark mode" title="Switch to dark mode" aria-pressed="false"><svg class="theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.1A8.6 8.6 0 0 1 10.9 3.4a8.6 8.6 0 1 0 9.7 9.7Z"/></svg><svg class="theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.8"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+  </div>
+</header>
+
+<main id="main">
+<section class="living-library is-loading" id="living-library" aria-labelledby="ll-title" aria-busy="true">
+  <canvas id="ll-canvas" aria-label="A marble library with a school of floating books and a reading desk"></canvas>
+  <div class="ll-atmosphere" aria-hidden="true"></div>
+  <h1 class="ll-announcement" id="ll-title">The Living Library</h1>
+  <div class="ll-room-controls" role="group" aria-label="Room controls" hidden>
+    <button class="ll-icon-button ll-motion" id="ll-motion" type="button" aria-label="Pause animations" title="Pause animations" aria-pressed="false"><svg id="ll-motion-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="7" y="5" width="3" height="14" rx=".6"/><rect x="14" y="5" width="3" height="14" rx=".6"/></svg><svg id="ll-motion-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" hidden><path d="m8 5 12 7-12 7Z"/></svg></button>
+  </div>
+  <div class="ll-desk-content" id="ll-desk-content">
+    <div class="ll-references" id="ll-references" aria-label="Places and people in the selected story"></div>
+    <aside class="ll-prompt" id="ll-prompt" aria-labelledby="ll-prompt-heading">
+      <div class="ll-prompt-copy"><p id="ll-prompt-text"></p></div>
+      <div class="ll-story" id="ll-story">
+        <p class="ll-story-meta" id="ll-story-meta"></p>
+        <h3 id="ll-story-title"></h3>
+        <div class="ll-actions">
+          <button class="ll-enter" id="ll-enter" type="button">Step inside</button>
+          <button id="ll-read-story" type="button">Read</button>
+        </div>
+      </div>
+    </aside>
+    <h2 class="ll-prompt-label" id="ll-prompt-heading">[WP]</h2>
+    <a class="ll-book-link" id="ll-read" href="./"><span class="ll-announcement">Open this book and step into its world</span></a>
+    <p class="ll-art-link" id="ll-art-link">Places &amp; people</p>
+    <div class="ll-timeline" id="ll-timeline">
+      <span class="ll-mouse" aria-hidden="true"></span>
+      <div class="ll-rule" id="ll-rule" role="slider" tabindex="0" aria-label="Stories in the order they were written" aria-valuemin="1">
+        <div class="ll-rule-months" id="ll-rule-months" aria-hidden="true"></div>
+        <span class="ll-rule-mark" id="ll-rule-mark" aria-hidden="true"></span>
+      </div>
+      <span class="ll-rule-count" id="ll-rule-count" aria-hidden="true"></span>
+    </div>
+  </div>
+  <a class="ll-book-fallback" id="ll-book-fallback" href="./"><img id="ll-fallback-cover" alt=""></a>
+  <p class="ll-fallback" id="ll-fallback" hidden>The 3D room is unavailable on this device. You can still choose a story here and read it.</p>
+  <noscript><p class="ll-noscript">The library needs JavaScript to open.</p></noscript>
+  <p class="ll-announcement" id="ll-announcement" role="status" aria-live="polite" aria-atomic="true"></p>
+  <dialog class="ll-lightbox" id="ll-lightbox" aria-labelledby="ll-image-title"><button class="ll-lightbox-close" id="ll-lightbox-close" type="button" aria-label="Close image">×</button><img id="ll-lightbox-image" alt=""><div class="ll-lightbox-caption"><button type="button" id="ll-image-prev" aria-label="Previous reference image">←</button><p id="ll-image-title"></p><button type="button" id="ll-image-next" aria-label="Next reference image">→</button></div></dialog>
+</section>
+</main>
+
+<canvas id="stage" aria-label="The world of the story" hidden></canvas>
+<section id="world" class="world" aria-live="polite" hidden>
+  <div class="world-top">
+    <button class="w-button w-button--quiet" id="leave" type="button">‹ Library</button>
+    <div class="world-title">
+      <p class="w-eyebrow" id="world-story"></p>
+      <h2 id="world-scene"></h2>
+    </div>
+    <button class="w-button w-button--quiet" id="toggle-reader" type="button" aria-expanded="false" aria-controls="reader">Read</button>
+  </div>
+
+  <div class="world-bottom">
+    <div class="scenes" id="scenes" role="tablist" aria-label="Places in this story"></div>
+    <div class="life" id="life">
+      <p class="life-text" id="life-text"></p>
+      <button class="w-button w-button--primary" id="make" type="button" hidden>Bring this place to life</button>
+      <button class="w-button" id="walk" type="button" hidden>Walk through it</button>
+    </div>
+  </div>
+
+  <aside class="reader" id="reader" aria-label="The story" hidden>
+    <div class="reader-progress"><span id="reader-progress"></span></div>
+    <div class="reader-scroll" id="reader-scroll" tabindex="0">
+      <p class="w-eyebrow" id="reader-meta"></p>
+      <h2 id="reader-title"></h2>
+      <div class="reader-gate" id="reader-gate" hidden>
+        <p id="reader-gate-text"></p>
+        <button class="w-button w-button--primary" id="reader-gate-ok" type="button">Read it</button>
+      </div>
+      <div class="prose" id="prose"></div>
+      <p class="fin" id="fin">❦</p>
+    </div>
+  </aside>
+</section>
+
+<div class="veil" id="veil" aria-hidden="true"></div>
+<div class="ll-loading" id="ll-loading" role="status" aria-live="polite"><div class="ll-loading-inner"><span class="ll-loading-book" aria-hidden="true"></span><p class="ll-loading-title" id="ll-loading-title">Opening the library</p><p class="ll-loading-detail" id="ll-loading-detail">Preparing your reading room.</p><span class="ll-loading-track" aria-hidden="true"><span></span></span><div class="ll-loading-actions"><button id="ll-loading-retry" type="button" hidden>Try again</button></div></div></div>
+
+<script>
+(() => {
+  // Theme switch, shared with the Story Computing Machine website (same storage key).
+  const key = 'living-library-theme', device = matchMedia('(prefers-color-scheme: dark)');
+  const button = document.getElementById('site-theme');
+  const saved = () => { try { const v = localStorage.getItem(key); return v === 'light' || v === 'dark' ? v : null; } catch { return null; } };
+  const apply = theme => {
+    document.documentElement.dataset.theme = theme; document.documentElement.style.colorScheme = theme;
+    const label = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+    button.setAttribute('aria-pressed', String(theme === 'dark')); button.setAttribute('aria-label', label); button.title = label;
+    window.dispatchEvent(new CustomEvent('site-theme-change', { detail: { theme } }));
+  };
+  apply(document.documentElement.dataset.theme);
+  button.addEventListener('click', () => {
+    const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    apply(theme); try { localStorage.setItem(key, theme); } catch { /* The device setting remains the fallback. */ }
+  });
+  device.addEventListener('change', event => { if (!saved()) apply(event.matches ? 'dark' : 'light'); });
+
+  // If the room is slow or fails to open, say so and offer a retry.
+  const room = document.getElementById('living-library'), detail = document.getElementById('ll-loading-detail'), retry = document.getElementById('ll-loading-retry');
+  retry.addEventListener('click', () => location.reload());
+  const slow = setTimeout(() => {
+    if (!room.classList.contains('is-loading')) return;
+    detail.textContent = 'The library is taking a little longer to open.'; retry.hidden = false;
+  }, 12000);
+  room.addEventListener('library-ready', () => clearTimeout(slow), { once: true });
+  window.addEventListener('library-failed', event => {
+    clearTimeout(slow);
+    document.getElementById('ll-loading-title').textContent = 'The library could not open';
+    detail.textContent = event.detail || 'Please try again.'; retry.hidden = false;
+  });
+})();
+</script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

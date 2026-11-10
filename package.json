@@ -1,0 +1,18 @@
+{
+  "name": "story-animation-machine",
+  "private": true,
+  "type": "module",
+  "description": "The Living Library, where the book on the stand opens into the world of its story.",
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "build": "python scripts/build_data.py --budget 0",
+    "start": "node --env-file-if-exists=.env server/server.mjs",
+    "dev": "node --env-file-if-exists=.env --watch server/server.mjs",
+    "worlds": "node --env-file-if-exists=.env scripts/make-worlds.mjs"
+  },
+  "optionalDependencies": {
+    "sharp": "^0.34.0"
+  }
+}
